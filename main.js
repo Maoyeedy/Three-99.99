@@ -4,10 +4,17 @@ import * as THREE from "three"
 const Config = {
   ratio: 1.61803399,
   initialCubeCount: 8,
+
   cameraViewSize: 10,
   cameraDistance: 10,
-  cameraAngleY: 45,  // Y-axis rotation (yaw)
+  cameraAngleY: 30,  // Y-axis rotation (yaw)
   cameraAngleX: 45,  // X-axis rotation (pitch)
+
+  sunAngleY: 45,  // Y-axis rotation (yaw)
+  sunAngleX: 45,  // X-axis rotation (pitch)
+  sunIntensity: 1.75,  // Sun intensity (0-1)
+  ambientIntensity: 0,  // Ambient light intensity (0-1)
+
   MaterialHue: 0,    // Initial hue (0-360)
   MaterialSaturation: 1,  // Saturation (0-1)
   MaterialLuminance: 0.5, // Luminance (0-1)
@@ -20,7 +27,6 @@ class CubeSpiral {
     this.initCamera()
     this.initRenderer()
     this.initLights()
-    // this.initMaterials()
     this.addInitialCubes(Config.initialCubeCount)
     this.addEventListeners()
     this.animate()
@@ -50,7 +56,7 @@ class CubeSpiral {
       viewSize * aspect / 2,   // right
       viewSize / 2,            // top
       -viewSize / 2,           // bottom
-      0.001,                     // near
+      0,                     // near
       100                      // far
     )
 
@@ -81,12 +87,20 @@ class CubeSpiral {
   }
 
   initLights () {
-    const ambientLight = new THREE.AmbientLight(0x404040)
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 1)
-    directionalLight.position.set(3, 5, 5)
+    const ambientLight = new THREE.AmbientLight(0xffffff, Config.ambientIntensity)
+    const directionalLight = new THREE.DirectionalLight(0xffffff, Config.sunIntensity)
+
+    const radianSunAngleY = THREE.MathUtils.degToRad(Config.sunAngleY)
+    const radianSunAngleX = THREE.MathUtils.degToRad(Config.sunAngleX)
+
+    directionalLight.position.set(
+      Math.sin(radianSunAngleY) * Math.cos(radianSunAngleX),
+      Math.sin(radianSunAngleX),
+      Math.cos(radianSunAngleY) * Math.cos(radianSunAngleX)
+    ).normalize() // 45-degree top-down
+
     this.scene.add(ambientLight, directionalLight)
   }
-
 
   addInitialCubes (count) {
     for (let i = 0; i < count; i++) {
@@ -97,22 +111,12 @@ class CubeSpiral {
   instantiateCube () {
     const geometry = new THREE.BoxGeometry(1, 1, 1)
 
-    // const material = new THREE.MeshStandardMaterial({
-    //   color: new THREE.Color().setHSL(
-    //     (Config.MaterialHue + Config.MaterialHueShift) % 360 / 360, // Increment hue with wraparound
-    //     Config.MaterialSaturation,
-    //     Config.MaterialLuminance
-    //   ),
-    // })
-
     const material = new THREE.MeshStandardMaterial({
-      emissive: new THREE.Color().setHSL(
-        (Config.MaterialHue + Config.MaterialHueShift) % 360 / 360,  // Increment hue with wraparound
+      color: new THREE.Color().setHSL(
+        (Config.MaterialHue + Config.MaterialHueShift) % 360 / 360, // Increment hue with wraparound
         Config.MaterialSaturation,
         Config.MaterialLuminance
       ),
-      emissiveIntensity: 1, // Adjust intensity if needed
-      color: 0x000000,  // Ensure there's no base color; only emissive color is shown
       metalness: 0,     // Make it non-metallic (for a more matte look)
       roughness: 1,     // Make it rough, for a more matte effect
     })
