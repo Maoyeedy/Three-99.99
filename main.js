@@ -6,8 +6,12 @@ const Config = {
   initialCubeCount: 8,
   cameraViewSize: 10,
   cameraDistance: 10,
-  cameraAngleY: 45,
-  cameraAngleX: 45,
+  cameraAngleY: 45,  // Y-axis rotation (yaw)
+  cameraAngleX: 45,  // X-axis rotation (pitch)
+  MaterialHue: 0,    // Initial hue (0-360)
+  MaterialSaturation: 1,  // Saturation (0-1)
+  MaterialLuminance: 0.5, // Luminance (0-1)
+  MaterialHueShift: 5,   // Hue shift for each new cube
 }
 
 class CubeSpiral {
@@ -16,7 +20,7 @@ class CubeSpiral {
     this.initCamera()
     this.initRenderer()
     this.initLights()
-    this.initMaterials()
+    // this.initMaterials()
     this.addInitialCubes(Config.initialCubeCount)
     this.addEventListeners()
     this.animate()
@@ -46,17 +50,20 @@ class CubeSpiral {
       viewSize * aspect / 2,   // right
       viewSize / 2,            // top
       -viewSize / 2,           // bottom
-      0.01,                     // near
+      0.001,                     // near
       100                      // far
     )
 
     // Apply isometric position and rotation
-    const radianAngle = THREE.MathUtils.degToRad(Config.cameraAngleY)
+    const radianAngleY = THREE.MathUtils.degToRad(Config.cameraAngleY)
+    const radianAngleX = THREE.MathUtils.degToRad(Config.cameraAngleX)
     const distance = Config.cameraDistance
+
+    // Apply rotation on both axes (X and Y)
     this.camera.position.set(
-      distance * Math.sin(radianAngle),
-      distance * Math.sin(radianAngle),
-      distance * Math.cos(radianAngle)
+      distance * Math.sin(radianAngleY) * Math.cos(radianAngleX),  // X position
+      distance * Math.sin(radianAngleX),                            // Y position
+      distance * Math.cos(radianAngleY) * Math.cos(radianAngleX)   // Z position
     )
     this.camera.lookAt(new THREE.Vector3(0, 0, 0))
 
@@ -80,13 +87,6 @@ class CubeSpiral {
     this.scene.add(ambientLight, directionalLight)
   }
 
-  initMaterials () {
-    this.materials = [
-      new THREE.MeshStandardMaterial({ color: "#ff0000" }),
-      new THREE.MeshStandardMaterial({ color: "#00ff00" }),
-      new THREE.MeshStandardMaterial({ color: "#0000ff" }),
-    ]
-  }
 
   addInitialCubes (count) {
     for (let i = 0; i < count; i++) {
@@ -96,8 +96,27 @@ class CubeSpiral {
 
   instantiateCube () {
     const geometry = new THREE.BoxGeometry(1, 1, 1)
-    const material =
-      this.materials[this.cubes.length % this.materials.length]
+
+    // const material = new THREE.MeshStandardMaterial({
+    //   color: new THREE.Color().setHSL(
+    //     (Config.MaterialHue + Config.MaterialHueShift) % 360 / 360, // Increment hue with wraparound
+    //     Config.MaterialSaturation,
+    //     Config.MaterialLuminance
+    //   ),
+    // })
+
+    const material = new THREE.MeshStandardMaterial({
+      emissive: new THREE.Color().setHSL(
+        (Config.MaterialHue + Config.MaterialHueShift) % 360 / 360,  // Increment hue with wraparound
+        Config.MaterialSaturation,
+        Config.MaterialLuminance
+      ),
+      emissiveIntensity: 1, // Adjust intensity if needed
+      color: 0x000000,  // Ensure there's no base color; only emissive color is shown
+      metalness: 0,     // Make it non-metallic (for a more matte look)
+      roughness: 1,     // Make it rough, for a more matte effect
+    })
+
     const cube = new THREE.Mesh(geometry, material)
 
     cube.scale.set(
@@ -134,17 +153,21 @@ class CubeSpiral {
     this.camera.left /= Config.ratio
     this.camera.right /= Config.ratio
     this.camera.updateProjectionMatrix()
+
+    // Update the MaterialHue for next cube
+    Config.MaterialHue = (Config.MaterialHue + Config.MaterialHueShift) % 360
   }
 
   setCameraTarget (cube) {
     const distance = Config.cameraDistance
-    const radianAngle = THREE.MathUtils.degToRad(Config.cameraAngleY)
+    const radianAngleY = THREE.MathUtils.degToRad(Config.cameraAngleY)
+    const radianAngleX = THREE.MathUtils.degToRad(Config.cameraAngleX)
 
-    // Maintain rotation while adjusting distance
+    // Adjust camera position to maintain target and apply rotation
     this.camera.position.set(
-      cube.position.x + distance * Math.sin(radianAngle),
-      cube.position.y + distance * Math.sin(radianAngle),
-      cube.position.z + distance * Math.cos(radianAngle)
+      cube.position.x + distance * Math.sin(radianAngleY) * Math.cos(radianAngleX),
+      cube.position.y + distance * Math.sin(radianAngleX),
+      cube.position.z + distance * Math.cos(radianAngleY) * Math.cos(radianAngleX)
     )
     this.camera.lookAt(cube.position)
   }
