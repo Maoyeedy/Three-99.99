@@ -7,30 +7,52 @@ const Config = {
 
   cameraViewSize: 10,
   cameraDistance: 10,
-  cameraAngleY: 30,  // Y-axis rotation (yaw)
-  cameraAngleX: 45,  // X-axis rotation (pitch)
+  cameraAngleY: 30,
+  cameraAngleX: 45,
 
-  sunAngleY: 45,     // Y-axis rotation (yaw)
-  sunAngleX: 45,     // X-axis rotation (pitch)
-  sunIntensity: 1.75,  // Sun intensity (0-1)
-  ambientIntensity: 0,  // Ambient light intensity (0-1)
+  sunAngleY: 45,
+  sunAngleX: 45,
+  sunIntensity: 1.75,
+  ambientIntensity: 0,
 
-  MaterialHue: 0,        // Initial hue (0-360)
-  MaterialSaturation: 1, // Saturation (0-1)
-  MaterialLuminance: 0.5,// Luminance (0-1)
-  MaterialHueShift: 5,   // Hue shift for each new cube
+  MaterialHue: 0,
+  MaterialSaturation: 1,
+  MaterialLuminance: 0.5,
+  MaterialHueShift: 5,
 }
 
 class CubeSpiral {
   constructor () {
-    this.initScene()
-    this.initCamera()
-    this.initRenderer()
-    this.initLights()
-    this.initWorldPivot()
-    this.addInitialCubes(Config.initialCubeCount)
-    this.addEventListeners()
-    this.animate()
+    this.loadAssets().then(() => {
+      this.initScene()
+      this.initCamera()
+      this.initRenderer()
+      this.initLights()
+      this.initWorldPivot()
+      this.addInitialCubes(Config.initialCubeCount)
+      this.addEventListeners()
+      this.animate()
+    })
+  }
+
+  async loadAssets () {
+    // Load texture
+    const textureLoader = new THREE.TextureLoader()
+    this.gridTexture = await new Promise(resolve => {
+      textureLoader.load('assets/Grid.png', resolve)
+    })
+    this.gridTexture.wrapS = THREE.RepeatWrapping
+    this.gridTexture.wrapT = THREE.RepeatWrapping
+
+    // Load sound
+    const audioLoader = new THREE.AudioLoader()
+    this.clickSound = await new Promise(resolve => {
+      audioLoader.load('assets/SFX_Click.mp3', buffer => {
+        const sound = new THREE.Audio(new THREE.AudioListener())
+        sound.setBuffer(buffer)
+        resolve(sound)
+      })
+    })
   }
 
   initScene () {
@@ -76,7 +98,6 @@ class CubeSpiral {
       distance * Math.cos(radianAngleY) * Math.cos(radianAngleX)
     )
     this.camera.lookAt(new THREE.Vector3(0, 0, 0))
-
     this.scene.add(this.camera)
   }
 
@@ -113,12 +134,16 @@ class CubeSpiral {
   }
 
   scaleWorldPivot () {
-    // Scale up the world pivot
     this.worldPivot.scale.multiplyScalar(Config.ratio)
-
-    // Update camera position to maintain relative view
     const lastCube = this.cubes[this.cubes.length - 1]
     this.setCameraTarget(lastCube)
+  }
+
+  playClickSound () {
+    if (this.clickSound.isPlaying) {
+      this.clickSound.stop()
+    }
+    this.clickSound.play()
   }
 
   instantiateCube () {
@@ -131,11 +156,11 @@ class CubeSpiral {
       ),
       metalness: 0,
       roughness: 1,
+      map: this.gridTexture,
     })
 
     const cube = new THREE.Mesh(geometry, material)
 
-    // Set local transform relative to world pivot
     cube.scale.set(this.currentScale, this.currentScale, this.currentScale)
     cube.position.copy(this.currentLocalCenter)
     cube.quaternion.copy(this.currentRotation)
@@ -143,7 +168,6 @@ class CubeSpiral {
     this.worldPivot.add(cube)
     this.cubes.push(cube)
 
-    // Update for next cube
     const nextScale = this.currentScale / Config.ratio
     const offset = new THREE.Vector3(
       -this.currentScale / 2 - nextScale / 2,
@@ -158,10 +182,8 @@ class CubeSpiral {
     )
     this.currentScale = nextScale
 
-    // Scale up the world pivot to compensate for smaller cubes
     this.scaleWorldPivot()
 
-    // Update material hue for next cube
     Config.MaterialHue = (Config.MaterialHue + Config.MaterialHueShift) % 360
   }
 
@@ -180,7 +202,6 @@ class CubeSpiral {
     )
     this.camera.lookAt(worldPosition)
 
-    // Adjust orthographic size based on world pivot scale
     const worldScale = this.worldPivot.scale.x
     const baseSize = Config.cameraViewSize * this.currentScale * worldScale
 
@@ -195,6 +216,7 @@ class CubeSpiral {
     window.addEventListener("resize", () => this.onResize())
     window.addEventListener("keydown", (event) => {
       if (event.code === "Space") {
+        this.playClickSound()
         this.instantiateCube()
       }
     })

@@ -3,9 +3,11 @@
   padding: 0;
   box-sizing: border-box;
 }
+
 html {
   background: #121316;
 }
+
 .webgl {
   position: fixed;
   top: 0;
