@@ -5,7 +5,7 @@ const Config = {
   ratio: 1.61803399,
   initialCubeCount: 8,
 
-  cameraViewSize: 10,
+  cameraViewSize: 5,
   cameraDistance: 10,
   cameraAngleY: 30,
   cameraAngleX: 45,
@@ -18,7 +18,7 @@ const Config = {
   MaterialHue: 0,
   MaterialSaturation: 1,
   MaterialLuminance: 0.5,
-  MaterialHueShift: 5,
+  MaterialHueShift: 10,
 }
 
 class CubeSpiral {
