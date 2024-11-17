@@ -10,14 +10,14 @@ const Config = {
   cameraAngleY: 30,  // Y-axis rotation (yaw)
   cameraAngleX: 45,  // X-axis rotation (pitch)
 
-  sunAngleY: 45,  // Y-axis rotation (yaw)
-  sunAngleX: 45,  // X-axis rotation (pitch)
+  sunAngleY: 45,     // Y-axis rotation (yaw)
+  sunAngleX: 45,     // X-axis rotation (pitch)
   sunIntensity: 1.75,  // Sun intensity (0-1)
   ambientIntensity: 0,  // Ambient light intensity (0-1)
 
-  MaterialHue: 0,    // Initial hue (0-360)
-  MaterialSaturation: 1,  // Saturation (0-1)
-  MaterialLuminance: 0.5, // Luminance (0-1)
+  MaterialHue: 0,        // Initial hue (0-360)
+  MaterialSaturation: 1, // Saturation (0-1)
+  MaterialLuminance: 0.5,// Luminance (0-1)
   MaterialHueShift: 5,   // Hue shift for each new cube
 }
 
@@ -27,6 +27,7 @@ class CubeSpiral {
     this.initCamera()
     this.initRenderer()
     this.initLights()
+    this.initWorldPivot()
     this.addInitialCubes(Config.initialCubeCount)
     this.addEventListeners()
     this.animate()
@@ -37,9 +38,14 @@ class CubeSpiral {
     this.clock = new THREE.Clock()
     this.cubes = []
     this.currentScale = 1
-    this.currentCenter = new THREE.Vector3(0, 0, 0)
+    this.currentLocalCenter = new THREE.Vector3(0, 0, 0)
     this.currentRotation = new THREE.Quaternion()
     this.currentRotation.setFromEuler(new THREE.Euler(0, 0, 0))
+  }
+
+  initWorldPivot () {
+    this.worldPivot = new THREE.Group()
+    this.scene.add(this.worldPivot)
   }
 
   initCamera () {
@@ -52,24 +58,22 @@ class CubeSpiral {
     const viewSize = Config.cameraViewSize
 
     this.camera = new THREE.OrthographicCamera(
-      -viewSize * aspect / 2,  // left
-      viewSize * aspect / 2,   // right
-      viewSize / 2,            // top
-      -viewSize / 2,           // bottom
-      0,                     // near
-      100                      // far
+      -viewSize * aspect / 2,
+      viewSize * aspect / 2,
+      viewSize / 2,
+      -viewSize / 2,
+      0,
+      1000
     )
 
-    // Apply isometric position and rotation
     const radianAngleY = THREE.MathUtils.degToRad(Config.cameraAngleY)
     const radianAngleX = THREE.MathUtils.degToRad(Config.cameraAngleX)
     const distance = Config.cameraDistance
 
-    // Apply rotation on both axes (X and Y)
     this.camera.position.set(
-      distance * Math.sin(radianAngleY) * Math.cos(radianAngleX),  // X position
-      distance * Math.sin(radianAngleX),                            // Y position
-      distance * Math.cos(radianAngleY) * Math.cos(radianAngleX)   // Z position
+      distance * Math.sin(radianAngleY) * Math.cos(radianAngleX),
+      distance * Math.sin(radianAngleX),
+      distance * Math.cos(radianAngleY) * Math.cos(radianAngleX)
     )
     this.camera.lookAt(new THREE.Vector3(0, 0, 0))
 
@@ -97,7 +101,7 @@ class CubeSpiral {
       Math.sin(radianSunAngleY) * Math.cos(radianSunAngleX),
       Math.sin(radianSunAngleX),
       Math.cos(radianSunAngleY) * Math.cos(radianSunAngleX)
-    ).normalize() // 45-degree top-down
+    ).normalize()
 
     this.scene.add(ambientLight, directionalLight)
   }
@@ -108,29 +112,35 @@ class CubeSpiral {
     }
   }
 
+  scaleWorldPivot () {
+    // Scale up the world pivot
+    this.worldPivot.scale.multiplyScalar(Config.ratio)
+
+    // Update camera position to maintain relative view
+    const lastCube = this.cubes[this.cubes.length - 1]
+    this.setCameraTarget(lastCube)
+  }
+
   instantiateCube () {
     const geometry = new THREE.BoxGeometry(1, 1, 1)
-
     const material = new THREE.MeshStandardMaterial({
       color: new THREE.Color().setHSL(
-        (Config.MaterialHue + Config.MaterialHueShift) % 360 / 360, // Increment hue with wraparound
+        (Config.MaterialHue + Config.MaterialHueShift) % 360 / 360,
         Config.MaterialSaturation,
         Config.MaterialLuminance
       ),
-      metalness: 0,     // Make it non-metallic (for a more matte look)
-      roughness: 1,     // Make it rough, for a more matte effect
+      metalness: 0,
+      roughness: 1,
     })
 
     const cube = new THREE.Mesh(geometry, material)
 
-    cube.scale.set(
-      this.currentScale,
-      this.currentScale,
-      this.currentScale
-    )
-    cube.position.copy(this.currentCenter)
+    // Set local transform relative to world pivot
+    cube.scale.set(this.currentScale, this.currentScale, this.currentScale)
+    cube.position.copy(this.currentLocalCenter)
+    cube.quaternion.copy(this.currentRotation)
 
-    this.scene.add(cube)
+    this.worldPivot.add(cube)
     this.cubes.push(cube)
 
     // Update for next cube
@@ -142,38 +152,43 @@ class CubeSpiral {
     )
 
     offset.applyQuaternion(this.currentRotation)
-    this.currentCenter.add(offset)
+    this.currentLocalCenter.add(offset)
     this.currentRotation.multiply(
       new THREE.Quaternion().setFromEuler(new THREE.Euler(0, -Math.PI / 2, 0))
     )
     this.currentScale = nextScale
 
-    // Focus camera on the latest cube
-    this.setCameraTarget(cube)
+    // Scale up the world pivot to compensate for smaller cubes
+    this.scaleWorldPivot()
 
-    // Adjust orthographic size
-    this.camera.top /= Config.ratio
-    this.camera.bottom /= Config.ratio
-    this.camera.left /= Config.ratio
-    this.camera.right /= Config.ratio
-    this.camera.updateProjectionMatrix()
-
-    // Update the MaterialHue for next cube
+    // Update material hue for next cube
     Config.MaterialHue = (Config.MaterialHue + Config.MaterialHueShift) % 360
   }
 
   setCameraTarget (cube) {
+    const worldPosition = new THREE.Vector3()
+    cube.getWorldPosition(worldPosition)
+
     const distance = Config.cameraDistance
     const radianAngleY = THREE.MathUtils.degToRad(Config.cameraAngleY)
     const radianAngleX = THREE.MathUtils.degToRad(Config.cameraAngleX)
 
-    // Adjust camera position to maintain target and apply rotation
     this.camera.position.set(
-      cube.position.x + distance * Math.sin(radianAngleY) * Math.cos(radianAngleX),
-      cube.position.y + distance * Math.sin(radianAngleX),
-      cube.position.z + distance * Math.cos(radianAngleY) * Math.cos(radianAngleX)
+      worldPosition.x + distance * Math.sin(radianAngleY) * Math.cos(radianAngleX),
+      worldPosition.y + distance * Math.sin(radianAngleX),
+      worldPosition.z + distance * Math.cos(radianAngleY) * Math.cos(radianAngleX)
     )
-    this.camera.lookAt(cube.position)
+    this.camera.lookAt(worldPosition)
+
+    // Adjust orthographic size based on world pivot scale
+    const worldScale = this.worldPivot.scale.x
+    const baseSize = Config.cameraViewSize * this.currentScale * worldScale
+
+    this.camera.left = -baseSize * (this.sizes.width / this.sizes.height)
+    this.camera.right = baseSize * (this.sizes.width / this.sizes.height)
+    this.camera.top = baseSize
+    this.camera.bottom = -baseSize
+    this.camera.updateProjectionMatrix()
   }
 
   addEventListeners () {
@@ -189,7 +204,14 @@ class CubeSpiral {
     this.sizes.width = window.innerWidth
     this.sizes.height = window.innerHeight
 
-    this.camera.aspect = this.sizes.width / this.sizes.height
+    const aspect = this.sizes.width / this.sizes.height
+    const worldScale = this.worldPivot.scale.x
+    const baseSize = Config.cameraViewSize * this.currentScale * worldScale
+
+    this.camera.left = -baseSize * aspect
+    this.camera.right = baseSize * aspect
+    this.camera.top = baseSize
+    this.camera.bottom = -baseSize
     this.camera.updateProjectionMatrix()
 
     this.renderer.setSize(this.sizes.width, this.sizes.height)
