@@ -37,14 +37,14 @@ class CubeSpiral {
   async loadAssets () {
     const textureLoader = new THREE.TextureLoader()
     this.gridTexture = await new Promise(resolve => {
-      textureLoader.load('assets/Grid.png', resolve)
+      textureLoader.load('/Grid.png', resolve)
     })
     this.gridTexture.wrapS = THREE.RepeatWrapping
     this.gridTexture.wrapT = THREE.RepeatWrapping
 
     const audioLoader = new THREE.AudioLoader()
     this.clickSound = await new Promise(resolve => {
-      audioLoader.load('assets/SFX_Click.mp3', buffer => {
+      audioLoader.load('/SFX_Click.mp3', buffer => {
         const sound = new THREE.Audio(new THREE.AudioListener())
         sound.setBuffer(buffer)
         resolve(sound)
