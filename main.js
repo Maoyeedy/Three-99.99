@@ -1,25 +1,24 @@
 import "./styles/style.css"
 import * as THREE from "three"
 
-const Config = {
-  ratio: 1.61803399,
-  initialCubeCount: 8,
+const ratio = 1.61803399
 
-  cameraViewSize: 5,
-  cameraDistance: 10,
-  cameraAngleY: 30,
-  cameraAngleX: 45,
+const cameraViewSize = 5
+const cameraDistance = 10
+const cameraAngleY = 30
+const cameraAngleX = 45
 
-  sunAngleY: 45,
-  sunAngleX: 45,
-  sunIntensity: 1.75,
-  ambientIntensity: 0,
+const sunAngleY = 45
+const sunAngleX = 45
+const sunIntensity = 1.75
+const ambientIntensity = 0
 
-  MaterialHue: 0,
-  MaterialSaturation: 1,
-  MaterialLuminance: 0.5,
-  MaterialHueShift: 10,
-}
+let materialHue = 0
+const materialSaturation = 1
+const materialLuminance = 0.5
+const materialHueShift = 10
+
+let initialCubeCount = 8
 
 class CubeSpiral {
   constructor () {
@@ -29,14 +28,13 @@ class CubeSpiral {
       this.initRenderer()
       this.initLights()
       this.initWorldPivot()
-      this.addInitialCubes(Config.initialCubeCount)
+      this.addInitialCubes(initialCubeCount)
       this.addEventListeners()
       this.animate()
     })
   }
 
   async loadAssets () {
-    // Load texture
     const textureLoader = new THREE.TextureLoader()
     this.gridTexture = await new Promise(resolve => {
       textureLoader.load('assets/Grid.png', resolve)
@@ -44,7 +42,6 @@ class CubeSpiral {
     this.gridTexture.wrapS = THREE.RepeatWrapping
     this.gridTexture.wrapT = THREE.RepeatWrapping
 
-    // Load sound
     const audioLoader = new THREE.AudioLoader()
     this.clickSound = await new Promise(resolve => {
       audioLoader.load('assets/SFX_Click.mp3', buffer => {
@@ -77,7 +74,7 @@ class CubeSpiral {
     }
 
     const aspect = this.sizes.width / this.sizes.height
-    const viewSize = Config.cameraViewSize
+    const viewSize = cameraViewSize
 
     this.camera = new THREE.OrthographicCamera(
       -viewSize * aspect / 2,
@@ -88,9 +85,9 @@ class CubeSpiral {
       1000
     )
 
-    const radianAngleY = THREE.MathUtils.degToRad(Config.cameraAngleY)
-    const radianAngleX = THREE.MathUtils.degToRad(Config.cameraAngleX)
-    const distance = Config.cameraDistance
+    const radianAngleY = THREE.MathUtils.degToRad(cameraAngleY)
+    const radianAngleX = THREE.MathUtils.degToRad(cameraAngleX)
+    const distance = cameraDistance
 
     this.camera.position.set(
       distance * Math.sin(radianAngleY) * Math.cos(radianAngleX),
@@ -112,11 +109,11 @@ class CubeSpiral {
   }
 
   initLights () {
-    const ambientLight = new THREE.AmbientLight(0xffffff, Config.ambientIntensity)
-    const directionalLight = new THREE.DirectionalLight(0xffffff, Config.sunIntensity)
+    const ambientLight = new THREE.AmbientLight(0xffffff, ambientIntensity)
+    const directionalLight = new THREE.DirectionalLight(0xffffff, sunIntensity)
 
-    const radianSunAngleY = THREE.MathUtils.degToRad(Config.sunAngleY)
-    const radianSunAngleX = THREE.MathUtils.degToRad(Config.sunAngleX)
+    const radianSunAngleY = THREE.MathUtils.degToRad(sunAngleY)
+    const radianSunAngleX = THREE.MathUtils.degToRad(sunAngleX)
 
     directionalLight.position.set(
       Math.sin(radianSunAngleY) * Math.cos(radianSunAngleX),
@@ -134,7 +131,7 @@ class CubeSpiral {
   }
 
   scaleWorldPivot () {
-    this.worldPivot.scale.multiplyScalar(Config.ratio)
+    this.worldPivot.scale.multiplyScalar(ratio)
     const lastCube = this.cubes[this.cubes.length - 1]
     this.setCameraTarget(lastCube)
   }
@@ -150,9 +147,9 @@ class CubeSpiral {
     const geometry = new THREE.BoxGeometry(1, 1, 1)
     const material = new THREE.MeshStandardMaterial({
       color: new THREE.Color().setHSL(
-        (Config.MaterialHue + Config.MaterialHueShift) % 360 / 360,
-        Config.MaterialSaturation,
-        Config.MaterialLuminance
+        (materialHue + materialHueShift) % 360 / 360,
+        materialSaturation,
+        materialLuminance
       ),
       metalness: 0,
       roughness: 1,
@@ -168,7 +165,7 @@ class CubeSpiral {
     this.worldPivot.add(cube)
     this.cubes.push(cube)
 
-    const nextScale = this.currentScale / Config.ratio
+    const nextScale = this.currentScale / ratio
     const offset = new THREE.Vector3(
       -this.currentScale / 2 - nextScale / 2,
       this.currentScale / 2 - nextScale / 2,
@@ -184,10 +181,10 @@ class CubeSpiral {
 
     this.scaleWorldPivot()
 
-    Config.MaterialHue = (Config.MaterialHue + Config.MaterialHueShift) % 360
+    materialHue = (materialHue + materialHueShift) % 360
 
     console.log(this.cubes.length)
-    if (this.cubes.length >= (360 / Config.MaterialHueShift) + Config.initialCubeCount) {
+    if (this.cubes.length >= (360 / materialHueShift) + initialCubeCount) {
       this.resetSpiral()
     }
   }
@@ -195,7 +192,6 @@ class CubeSpiral {
   resetSpiral () {
     console.log("Resetting spiral...")
 
-    // Reset the world pivot and scale
     this.worldPivot.scale.set(1, 1, 1)
     this.cubes.forEach(cube => {
       this.worldPivot.remove(cube)
@@ -206,20 +202,18 @@ class CubeSpiral {
     this.currentLocalCenter.set(0, 0, 0)
     this.currentRotation.setFromEuler(new THREE.Euler(0, 0, 0))
 
-    //reset hue to 0
-    Config.MaterialHue = 0
+    materialHue = 0
 
-    // Re-add the initial cube to start the cycle again
-    this.addInitialCubes(Config.initialCubeCount)
+    this.addInitialCubes(initialCubeCount)
   }
 
   setCameraTarget (cube) {
     const worldPosition = new THREE.Vector3()
     cube.getWorldPosition(worldPosition)
 
-    const distance = Config.cameraDistance
-    const radianAngleY = THREE.MathUtils.degToRad(Config.cameraAngleY)
-    const radianAngleX = THREE.MathUtils.degToRad(Config.cameraAngleX)
+    const distance = cameraDistance
+    const radianAngleY = THREE.MathUtils.degToRad(cameraAngleY)
+    const radianAngleX = THREE.MathUtils.degToRad(cameraAngleX)
 
     this.camera.position.set(
       worldPosition.x + distance * Math.sin(radianAngleY) * Math.cos(radianAngleX),
@@ -229,7 +223,7 @@ class CubeSpiral {
     this.camera.lookAt(worldPosition)
 
     const worldScale = this.worldPivot.scale.x
-    const baseSize = Config.cameraViewSize * this.currentScale * worldScale
+    const baseSize = cameraViewSize * this.currentScale * worldScale
 
     this.camera.left = -baseSize * (this.sizes.width / this.sizes.height)
     this.camera.right = baseSize * (this.sizes.width / this.sizes.height)
@@ -254,7 +248,7 @@ class CubeSpiral {
 
     const aspect = this.sizes.width / this.sizes.height
     const worldScale = this.worldPivot.scale.x
-    const baseSize = Config.cameraViewSize * this.currentScale * worldScale
+    const baseSize = cameraViewSize * this.currentScale * worldScale
 
     this.camera.left = -baseSize * aspect
     this.camera.right = baseSize * aspect
@@ -272,5 +266,4 @@ class CubeSpiral {
   }
 }
 
-// Initialize the spiral
 new CubeSpiral()
