@@ -11,7 +11,7 @@ const cameraAngleX = 45
 const sunAngleY = 45
 const sunAngleX = 45
 const sunIntensity = 1.75
-const ambientIntensity = 0
+const ambientIntensity = 1
 
 let materialHue = 0
 const materialSaturation = 1
