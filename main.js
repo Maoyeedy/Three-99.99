@@ -185,6 +185,32 @@ class CubeSpiral {
     this.scaleWorldPivot()
 
     Config.MaterialHue = (Config.MaterialHue + Config.MaterialHueShift) % 360
+
+    console.log(this.cubes.length)
+    if (this.cubes.length >= (360 / Config.MaterialHueShift) + Config.initialCubeCount) {
+      this.resetSpiral()
+    }
+  }
+
+  resetSpiral () {
+    console.log("Resetting spiral...")
+
+    // Reset the world pivot and scale
+    this.worldPivot.scale.set(1, 1, 1)
+    this.cubes.forEach(cube => {
+      this.worldPivot.remove(cube)
+    })
+    this.cubes = []
+
+    this.currentScale = 1
+    this.currentLocalCenter.set(0, 0, 0)
+    this.currentRotation.setFromEuler(new THREE.Euler(0, 0, 0))
+
+    //reset hue to 0
+    Config.MaterialHue = 0
+
+    // Re-add the initial cube to start the cycle again
+    this.addInitialCubes(Config.initialCubeCount)
   }
 
   setCameraTarget (cube) {

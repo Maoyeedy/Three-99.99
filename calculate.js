@@ -1,5 +1,5 @@
 let a = 100 // You can adjust the size of 'a' as needed
-let digit = 1
+let digit = 2
 let totalDiskSize = a * a * 1.618
 let currentBlockSize = a * a
 let remainingArea = totalDiskSize
@@ -15,6 +15,5 @@ document.addEventListener('keydown', (event) => {
 
         // Update the size for the next block
         currentBlockSize *= 0.618 * 0.618
-        digit += 1
     }
 })
