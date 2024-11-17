@@ -5,7 +5,7 @@ const ratio = 1.61803399
 
 const cameraViewSize = 5
 const cameraDistance = 10
-const cameraAngleY = 30
+const cameraAngleY = 45
 const cameraAngleX = 45
 
 const sunAngleY = 45
@@ -16,7 +16,7 @@ const ambientIntensity = 0
 let materialHue = 0
 const materialSaturation = 1
 const materialLuminance = 0.5
-const materialHueShift = 10
+const materialHueShift = 30
 
 let initialCubeCount = 8
 
