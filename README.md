@@ -1,1 +1,1 @@
-# [Play](https://maoyeedy.github.io/Threejs-99.99..%)
+# [Play](https://maoyeedy.github.io/Three-99.99)
